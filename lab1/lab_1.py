@@ -826,7 +826,7 @@ print(f"RMSE: {rmse:.4f}")
 # Sprawdza się to następująco:
 # - obliczamy błąd treningowy oraz testowy,
 # - jeżeli oba błędy są wysokie, to mamy zbyt małe dopasowanie (*underfitting*) i trzeba użyć pojemniejszego modelu,
-# - jeżeli błąd treningowy jest dużo niższy od treningowego, to mamy nadmierne dopasowanie (*overfitting*) i model trzeba regularyzować.
+# - jeżeli błąd treningowy jest dużo niższy od testowego, to mamy nadmierne dopasowanie (*overfitting*) i model trzeba regularyzować.
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -892,7 +892,7 @@ print("Solution is correct!")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
+# // Błąd jest stosunkowo bliski względem tego jaki się pojawił przy regresji regularyzowanej. Większość cen domów znajdowała się w pobliżu 100-200 tysięcy dolarów, więc około 16-21 tysięcy błędu to subiektywnie dość mało. Za to widać, że błąd na zbiorze treningowym jest dużo niższy od tego na zbiorze testowym. Więc doszło do overfittingu.
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Regresja regularyzowana (ridge, LASSO)
@@ -1016,7 +1016,7 @@ print()
 #
 # Wypisz znalezione optymalne wartości siły regularyzacji `.alpha_` dla obu modeli, zaokrąglone do 4 miejsca po przecinku dla czytelności.
 #
-# Wartości błędu przypisz do zmiennych: `reg_train_rmse`, `reg_test_rmse`, `lass_train_rmse`, `lasso_test_rmse`.
+# Wartości błędu przypisz do zmiennych: `ridge_train_rmse`, `ridge_test_rmse`, `lasso_train_rmse`, `lasso_test_rmse`.
 # Wartości $\alpha$ przypisz do zmiennych `reg_ridge_alpha` oraz `reg_lasso_alpha`.
 #
 # ---
@@ -1034,7 +1034,18 @@ print()
 # Przetestuj modele z użyciem `assess_regression_model()`. Skomentuj wyniki. Czy udało się wyeliminować overfitting?
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+from sklearn.linear_model import RidgeCV, LassoCV
+
+alphas = np.linspace(0.1, 100, 1000)
+reg_ridge_cv = RidgeCV(alphas=alphas)  # LOOCV is used by default
+ridge_train_rmse, ridge_test_rmse = assess_regression_model(reg_ridge_cv, X_train, X_test, y_train, y_test)
+reg_ridge_alpha = reg_ridge_cv.alpha_
+print(f"RidgeCV alpha = {round(reg_ridge_alpha, 4)}")
+
+reg_lasso_cv = LassoCV(n_alphas=1000, random_state=0)  # 5-fold CV is used by default
+lasso_train_rmse, lasso_test_rmse = assess_regression_model(reg_lasso_cv, X_train, X_test, y_train, y_test)
+reg_lasso_alpha = reg_lasso_cv.alpha_
+print(f"LassoCV alpha = {round(reg_lasso_alpha, 4)}")
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -1050,9 +1061,7 @@ assert 0 < reg_lasso_alpha < 0.1
 print("Solution is correct!")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
-#
-#
+# // Udało się wyeliminować overfitting, bo w obu przypadkach RMSE dla zbioru testowego i treningowego są bardzo podobne. Przy czym LassoCV poradziło sobie lepiej - różnica między RMSE dla obu zbiorów jest mniejsza.
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Regresja wielomianowa
@@ -1163,7 +1172,17 @@ y_mapping = {
 }
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+df = pd.read_csv("bank_marketing_data.csv", sep=";")
+df = df.drop(["default", "duration", "pdays", "poutcome"], axis="columns")
+df = df.loc[~(df["education"] == "illiterate"), :]
+df = df.replace({
+    "education": education_mapping,
+    "contact": contact_mapping,
+    "month": month_mapping,
+    "day_of_week": day_of_week_mapping,
+    "y": y_mapping
+})
+y = df.pop("y")
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -1191,12 +1210,30 @@ assert [0,1] == sorted(df['contact'].unique())
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 # plot missing values
-# your_code
+df = df.replace("unknown", None)
+msno.bar(df)
+replace_na(df, "job", "unemployed")
+replace_na(df, "marital", "single")
+replace_na(df, "education", "secondary")
+replace_na(df, "housing", "no")
+replace_na(df, "loan", "no")
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 # plot class frequencies
-# your_code
+categorical_features = df.select_dtypes(include="object").columns
+classes = []
+frequencies = []
+for column in categorical_features:
+    counts = df[categorical_features].value_counts(column)
+    counts = list(zip(counts.index, counts))
+    for element, frequency in counts:
+        classes.append(f"{column}: {element}")
+        frequencies.append(frequency)
+
+frequency_df = pd.DataFrame({"classes": classes, "frequencies": frequencies}, index=classes)
+title = "Frequency of each categorical feature's class"
+plot = frequency_df.plot.bar(legend=False, title=title, xlabel="class", ylabel="frequency")
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
