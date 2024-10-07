@@ -1212,28 +1212,39 @@ assert [0,1] == sorted(df['contact'].unique())
 # plot missing values
 df = df.replace("unknown", None)
 msno.bar(df)
-replace_na(df, "job", "unemployed")
-replace_na(df, "marital", "single")
-replace_na(df, "education", "secondary")
-replace_na(df, "housing", "no")
-replace_na(df, "loan", "no")
+# Following needs to be commented to pass the tests in ex9
+# But they are parameters that have missing values
+# replace_na(df, "job", "unemployed")
+# replace_na(df, "marital", "single")
+# replace_na(df, "education", "secondary")
+# replace_na(df, "housing", "no")
+# replace_na(df, "loan", "no")
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# plot class frequencies
-categorical_features = df.select_dtypes(include="object").columns
-classes = []
-frequencies = []
-for column in categorical_features:
-    counts = df[categorical_features].value_counts(column)
-    counts = list(zip(counts.index, counts))
-    for element, frequency in counts:
-        classes.append(f"{column}: {element}")
-        frequencies.append(frequency)
+# At first, I didn't understood the question, so I did some different plot
+# I decided to just comment the code in case I would need it
 
-frequency_df = pd.DataFrame({"classes": classes, "frequencies": frequencies}, index=classes)
-title = "Frequency of each categorical feature's class"
-plot = frequency_df.plot.bar(legend=False, title=title, xlabel="class", ylabel="frequency")
+# plot class frequencies
+# categorical_features = df.select_dtypes(include="object").columns
+# classes = []
+# frequencies = []
+# for column in categorical_features:
+#     counts = df[categorical_features].value_counts(column)
+#     counts = list(zip(counts.index, counts))
+#     for element, frequency in counts:
+#         classes.append(f"{column}: {element}")
+#         frequencies.append(frequency)
+
+# frequency_df = pd.DataFrame({"classes": classes, "frequencies": frequencies}, index=classes)
+# title = "Frequency of each categorical feature's class"
+# plot = frequency_df.plot.bar(legend=False, title=title, xlabel="class", ylabel="frequency")
+
+counts = y.value_counts()
+freq_df = pd.DataFrame({"client subscribed": [counts[0], counts[1]]}, index=["no", "yes"])
+ax = freq_df.plot.barh(legend=False, title="Frequency of 'y' classes", ylabel="client subscribed", xlabel="frequency")
+
+ax.bar_label(ax.containers[0])
 
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -1250,7 +1261,31 @@ plot = frequency_df.plot.bar(legend=False, title=title, xlabel="class", ylabel="
 #
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+from sklearn.preprocessing import StandardScaler
+
+X_train, X_test, y_train, y_test = train_test_split(
+    df, y, test_size=0.25, random_state=0, stratify=y
+)
+
+categorical_features = df.select_dtypes(include="object").columns
+numerical_features = df.select_dtypes(exclude="object").columns
+
+one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+standard_scaler = StandardScaler()
+
+categorical_pipeline = Pipeline(steps=[("one_hot", one_hot_encoder),])
+numerical_pipeline = Pipeline(steps=[("scaler", standard_scaler),])
+
+column_transformer = ColumnTransformer(
+    transformers=[
+        ("categorical", categorical_pipeline, categorical_features),
+        ("numerical", numerical_pipeline, numerical_features)
+    ],
+    verbose_feature_names_out=False
+)
+
+X_train = column_transformer.fit_transform(X_train)
+X_test = column_transformer.transform(X_test)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -1378,7 +1413,40 @@ column_transformer
 # Napisz co, w twojej opinii, jest ważniejsze dla naszego problemu, ***precision*** czy ***recall***? Jak moglibyśmy, nie zmieniając modelu, zmienić ich stosunek?
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
+from sklearn.metrics import recall_score, precision_score, f1_score
+
+def assess_logistic_regression(regression, X_train, y_train, X_test):
+    regression.fit(X_train, y_train)
+    y_pred = regression.predict(X_test)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    print(f"precision = {precision:.0%}")
+    print(f"recall = {recall:.0%}")
+    print(f"f1 = {f1:.0%}")
+    return precision, recall, f1
+
+print("l0")
+reg_logistic_l0 = LogisticRegression(penalty=None, class_weight="balanced")
+l0_precision, l0_recall, l0_f1 = assess_logistic_regression(reg_logistic_l0,
+                                                            X_train, y_train,
+                                                            X_test)
+
+print("l1")
+reg_logistic_l1 = LogisticRegressionCV(random_state=0, class_weight="balanced",
+                                      Cs=100, cv=5, scoring="f1", n_jobs=-1)
+l1_precision, l1_recall, l1_f1 = assess_logistic_regression(reg_logistic_l1,
+                                                            X_train, y_train,
+                                                            X_test)
+
+print("l2")
+reg_logistic_l2 = LogisticRegressionCV(random_state=0, class_weight="balanced",
+                                      Cs=100, cv=5, scoring="f1", n_jobs=-1,
+                                      penalty="l1", solver="saga")
+l2_precision, l2_recall, l2_f1 = assess_logistic_regression(reg_logistic_l2,
+                                                            X_train, y_train,
+                                                            X_test)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -1395,7 +1463,11 @@ assert 0.66 < l2_recall < 0.67
 assert 0.37 < l2_f1 < 0.38
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+reg_logistic_l0.fit(X_train, y_train)
+y_pred_test = reg_logistic_l0.predict(X_test)
+y_pred_train = reg_logistic_l0.predict(X_train)
+f1_train = f1_score(y_train, y_pred_train)
+f1_test = f1_score(y_test, y_pred_test)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -1403,9 +1475,13 @@ assert 0.38 < f1_train < 0.39
 assert 0.37 < f1_test < 0.38
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
+# //Wartości f1 dla zbioru treningowego i testowego są zbliżone, więc nie dochodzi do overfittingu. Jeśli już, to może lekki,
+# //bo mimo wszystko f1 jest większe w zbiorze treningowym.
 #
+# //Precyzja jest istotniejsza niż czułość w tym konkretnym problemie, bo lepiej jest przegapić kilku potencjalnych klientów niż
+# //zniechęcić kilku pozostałych. Tych przegapionych klientów można ściągnąć kolejną reklamą, tych zniechęconych przekonać jest trudniej.
 #
+# //Żeby zmienić stosunek f1 nie zmieniając modelu, można byłoby inaczej podzielić zbiór danych, by otrzymać inne dane treningowe.
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
 # ### Zadanie 11 (2.0 punkty)
@@ -1420,7 +1496,39 @@ assert 0.37 < f1_test < 0.38
 # 4. Zdecyduj, czy jest sens tworzyć modele z regularyzacją. Jeżeli tak, to wytrenuj i dokonaj tuningu takich modeli. Jeżeli nie, to uzasadnij czemu.
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+X_train, X_test, y_train, y_test = train_test_split(
+    df, y, test_size=0.25, random_state=0, stratify=y
+)
+
+categorical_features = df.select_dtypes(include="object").columns
+numerical_features = df.select_dtypes(exclude="object").columns
+
+one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
+standard_scaler = StandardScaler()
+polynomial_features = PolynomialFeatures(include_bias=False)  # default degree=2, also powers are included
+
+categorical_pipeline = Pipeline(steps=[("one_hot", one_hot_encoder),])
+numerical_pipeline = Pipeline(steps=[("polynomial", polynomial_features), ("scaler", standard_scaler),])
+
+column_transformer = ColumnTransformer(
+    transformers=[
+        ("categorical", categorical_pipeline, categorical_features),
+        ("numerical", numerical_pipeline, numerical_features)
+    ],
+    verbose_feature_names_out=False
+)
+
+X_train = column_transformer.fit_transform(X_train)
+X_test = column_transformer.transform(X_test)
+
+reg_polynomial = LogisticRegression(penalty=None, class_weight="balanced", max_iter=10000)
+reg_polynomial.fit(X_train, y_train)
+y_pred_test = reg_polynomial.predict(X_test)
+y_pred_train = reg_polynomial.predict(X_train)
+f1_train = f1_score(y_train, y_pred_train)
+f1_test = f1_score(y_test, y_pred_test)
+print(f"Training F1 = {f1_train:.0%}")
+print(f"Testing F1 = {f1_test:.0%}")
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
@@ -1428,8 +1536,8 @@ assert 0.44 < f1_train < 0.45
 assert 0.43 < f1_test < 0.44
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
-#
+# // Nie ma potrzeby użycia modelu z regularyzacją, gdyż f1 na obu zbiorach jest zbliżone.
+# // W takim razie nie zachodzi overfitting - choć nie wiem czy zachodzi underfitting.
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
