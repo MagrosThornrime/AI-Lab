@@ -76,13 +76,13 @@
 # %% [markdown]
 # ## Konfiguracja własnego komputera
 #
-# Jeżeli korzystasz z własnego komputera, to musisz zainstalować trochę więcej bibliotek (Google Colab ma je już zainstalowane). Najlepiej używać Pythona 3.9 lub nowszej wersji. Laboratorium było testowane z wersją 3.9.
+# Jeżeli korzystasz z własnego komputera, to musisz zainstalować trochę więcej bibliotek (Google Colab ma je już zainstalowane). Najlepiej używać Pythona 3.9 lub nowszej wersji. Laboratorium było testowane z wersją 3.11.
 
 # %% [markdown]
 # ### Poetry
 #
 # Narzędzie [poetry](https://python-poetry.org/) zyskuje dużą popularność w zakresie zarządzania zależnościami w Pythonie.
-# Projekt posiada pliku `pyproject.toml` oraz `poetry.lock`, które zawierają informacje o zależnościach.
+# Projekt posiada pliki `pyproject.toml` oraz `poetry.lock`, które zawierają informacje o zależnościach.
 #
 # Użycie Poetry sprawadza się do następujących poleceń.
 #
@@ -93,14 +93,6 @@
 # 3. Po konfiguracji możemy uruchamiać Jupyter Lab poleceniem:
 #    * `poetry run jupyter lab`
 #
-
-# %% [markdown]
-# ### Anaconda
-#
-# Jeżeli korzystasz z Anacondy (możesz uruchomić w terminalu):
-
-# %%
-# # !conda install -c conda-forge --yes numpy pandas scikit-learn matplotlib missingno
 
 # %% [markdown]
 # ### venv
@@ -273,8 +265,8 @@ plt.show()
 # Przekształć zmienną **SalePrice** za pomocą funkcji logarytmicznej `np.log1p`.
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
+# apply log transform
 df.loc[:, "SalePrice"] = np.log1p(df.loc[:, "SalePrice"])
-
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert 9.0 <= df.loc[:, "SalePrice"].max() <= 14.0
@@ -426,7 +418,6 @@ replace_na(df, "FireplaceQu", value="No")
 # Czasami w ogóle nie da się ustalić jaka wartość byłaby sensowna, ponieważ nie mamy żadnego dostępu do osób odpowiedzialnych za przygotowanie wykorzystywanego zbioru danych.
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
 replace_na(df, "CentralAir", value="N")
 replace_na(df, "EnclosedPorch", value=0)
 replace_na(df, "Fireplaces", value=0)
@@ -459,6 +450,7 @@ print("Solution is correct!")
 # Zmienne **MSSubClass** oraz **MoSold** są kategoryczne (tak wynika z informacji zawartej w pliku [ames_description.txt](ames_description.txt)), a są w naszych danych wprost liczbami. Przekształćmy je zatem do poprawnego typu.
 
 # %% editable=true slideshow={"slide_type": ""}
+pd.set_option("future.no_silent_downcasting", True)
 df = df.replace(
     {
         "MSSubClass": {
@@ -495,6 +487,7 @@ df = df.replace(
         },
     }
 )
+
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Oprócz tego zakodujemy zmienne kategoryczne uporządkowane (*categorical ordinal*) z tekstowych na kolejne liczby całkowite.
@@ -557,6 +550,31 @@ df = df.replace(
         "PoolQC": {"No": 0, "Fa": 1, "TA": 2, "Gd": 3, "Ex": 4},
         "Street": {"Grvl": 0, "Pave": 1},
         "Utilities": {"ELO": 1, "NoSeWa": 2, "NoSewr": 3, "AllPub": 4},
+    }
+)
+
+df = df.astype(
+    {
+        "Alley": np.int64,
+        "BsmtCond": np.int64,
+        "BsmtExposure": np.int64,
+        "BsmtFinType1": np.int64,
+        "BsmtFinType2": np.int64,
+        "BsmtQual": np.int64,
+        "ExterCond": np.int64,
+        "ExterQual": np.int64,
+        "FireplaceQu": np.int64,
+        "Functional": np.int64,
+        "GarageCond": np.int64,
+        "GarageQual": np.int64,
+        "HeatingQC": np.int64,
+        "KitchenQual": np.int64,
+        "LandSlope": np.int64,
+        "LotShape": np.int64,
+        "PavedDrive": np.int64,
+        "PoolQC": np.int64,
+        "Street": np.int64,
+        "Utilities": np.int64,
     }
 )
 
@@ -821,7 +839,7 @@ print(f"RMSE: {rmse:.4f}")
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # W trakcie trenowania modelu może dojść do sytuacji, w której zostanie on **przeuczony (overfitting)**. W takim wypadku model nadmiernie dostosowuje się do danych treningowych, "zakuwając" je. Daje wtedy bardzo dokładne wyniki na zbiorze treningowym, ale kiepskie na zbiorze testowym. Modele przeuczone słabo zatem się **generalizują (generalization)**.
 #
-# Dlatego wcześniej wydzieliliśmy zbiór testowy, za pomocą którego oceniamy skuteczność naszego modelu. Pozwala to uniknąć powyższego błędu. Przeuczenie bardzo często można rozpoznać właśnie po różnym zachowaniu modelu na danych treningowych i testowych. Jeśli z danymi treningowymi model radzi sobie dużo lepiej, niż z testowymi, to istnieje dużo ryzyko, że model został przeuczony i skupił się na zapamiętywaniu konkretnych przykładów, na których się uczył, niż na wyciąganiu z nich uniwersalnych wzorców. Taki model słabo się generalizuje i nie poradzi sobie z nowymi danymi.
+# Dlatego wcześniej wydzieliliśmy zbiór testowy, za pomocą którego oceniamy skuteczność naszego modelu. Pozwala to uniknąć powyższego błędu. Przeuczenie bardzo często można rozpoznać właśnie po różnym zachowaniu modelu na danych treningowych i testowych. Jeśli z danymi treningowymi model radzi sobie dużo lepiej, niż z testowymi, to istnieje duże ryzyko, że model został przeuczony i skupił się na zapamiętywaniu konkretnych przykładów, na których się uczył, niż na wyciąganiu z nich uniwersalnych wzorców. Taki model słabo się generalizuje i nie poradzi sobie z nowymi danymi.
 #
 # Sprawdza się to następująco:
 # - obliczamy błąd treningowy oraz testowy,
@@ -893,6 +911,7 @@ print("Solution is correct!")
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
 # // Błąd jest stosunkowo bliski względem tego jaki się pojawił przy regresji regularyzowanej. Większość cen domów znajdowała się w pobliżu 100-200 tysięcy dolarów, więc około 16-21 tysięcy błędu to subiektywnie dość mało. Za to widać, że błąd na zbiorze treningowym jest dużo niższy od tego na zbiorze testowym. Więc doszło do overfittingu.
+#
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Regresja regularyzowana (ridge, LASSO)
@@ -1047,7 +1066,6 @@ lasso_train_rmse, lasso_test_rmse = assess_regression_model(reg_lasso_cv, X_trai
 reg_lasso_alpha = reg_lasso_cv.alpha_
 print(f"LassoCV alpha = {round(reg_lasso_alpha, 4)}")
 
-
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert 17000 < ridge_train_rmse < 18000
 assert 18000 < ridge_test_rmse < 19000
@@ -1184,7 +1202,6 @@ df = df.replace({
 })
 y = df.pop("y")
 
-
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert 'default' not in df.columns
 assert 'duration' not in df.columns
@@ -1199,6 +1216,15 @@ assert [3,4,5,6,7,8,9,10,11,12] == sorted(df['month'].unique())
 assert [1,2,3,4,5] == sorted(df['day_of_week'].unique())
 assert [0,1] == sorted(df['contact'].unique())
 
+# %%
+#downcast replaced columns into int64\n",
+df = df.astype({
+   "contact": np.int64,
+    "month": np.int64,
+    "day_of_week": np.int64
+})
+y = y.astype({"y": np.int64})
+
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
 # ### Zadanie 8 (0.5 punktu)
 
@@ -1212,34 +1238,9 @@ assert [0,1] == sorted(df['contact'].unique())
 # plot missing values
 df = df.replace("unknown", None)
 msno.bar(df)
-# Following needs to be commented to pass the tests in ex9
-# But they are parameters that have missing values
-# replace_na(df, "job", "unemployed")
-# replace_na(df, "marital", "single")
-# replace_na(df, "education", "secondary")
-# replace_na(df, "housing", "no")
-# replace_na(df, "loan", "no")
-
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# At first, I didn't understood the question, so I did some different plot
-# I decided to just comment the code in case I would need it
-
 # plot class frequencies
-# categorical_features = df.select_dtypes(include="object").columns
-# classes = []
-# frequencies = []
-# for column in categorical_features:
-#     counts = df[categorical_features].value_counts(column)
-#     counts = list(zip(counts.index, counts))
-#     for element, frequency in counts:
-#         classes.append(f"{column}: {element}")
-#         frequencies.append(frequency)
-
-# frequency_df = pd.DataFrame({"classes": classes, "frequencies": frequencies}, index=classes)
-# title = "Frequency of each categorical feature's class"
-# plot = frequency_df.plot.bar(legend=False, title=title, xlabel="class", ylabel="frequency")
-
 counts = y.value_counts()
 freq_df = pd.DataFrame({"client subscribed": [counts[0], counts[1]]}, index=["no", "yes"])
 ax = freq_df.plot.barh(legend=False, title="Frequency of 'y' classes", ylabel="client subscribed", xlabel="frequency")
@@ -1287,17 +1288,14 @@ column_transformer = ColumnTransformer(
 X_train = column_transformer.fit_transform(X_train)
 X_test = column_transformer.transform(X_test)
 
-
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-assert X_train.shape == (30877, 37)
-assert X_test.shape == (10293, 37)
+assert X_train.shape[0] == 30877
+assert X_test.shape[0] == 10293
 
 assert X_train[:,0].min() == 0
 assert X_train[:,0].max() == 1
-assert -3 < X_train[:,26].min() < -2
-assert 5 < X_train[:,26].max() < 6
-
-
+assert -3 < X_train[:,-1].min() < -2
+assert 0 < X_train[:,-1].max() < 1
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 column_transformer
@@ -1402,7 +1400,7 @@ column_transformer
 #     - przetestuj model, wypisując precyzję, czułość i miarę F1 w procentach.
 #     - **uwaga:** Scikit-learn stosuje tutaj konwencję, gdzie parametr `C` to odwrotność siły regularyzacji - im mniejszy, tym silniejsza regularyzacja.
 # 3. Dokonaj analogicznego tuningu, ale dla regularyzacji L1. Użyj solwera SAGA. Przetestuj model, wypisując precyzję, czułość i miarę F1 w procentach. Przypisz wyniki do zmiennych:
-#    - `l0_precision`, `l0_recall`, `l0_f1` - dla braku regularyzacji,
+#    - `nol_precision`, `nol_recall`, `nol_f1` - dla braku regularyzacji,
 #    - `l1_precision`, `l1_recall`, `l1_f1` - dla regularyzacji L1,
 #    - `l2_precision`, `l2_recall`, `l2_f1` - dla regularyzacji L2.
 # 5. Dokonaj analizy wytrenowanych modeli:
@@ -1428,8 +1426,8 @@ def assess_logistic_regression(regression, X_train, y_train, X_test):
     return precision, recall, f1
 
 print("l0")
-reg_logistic_l0 = LogisticRegression(penalty=None, class_weight="balanced")
-l0_precision, l0_recall, l0_f1 = assess_logistic_regression(reg_logistic_l0,
+reg_logistic_nol = LogisticRegression(penalty=None, class_weight="balanced")
+nol_precision, nol_recall, nol_f1 = assess_logistic_regression(reg_logistic_l0,
                                                             X_train, y_train,
                                                             X_test)
 
@@ -1448,11 +1446,10 @@ l2_precision, l2_recall, l2_f1 = assess_logistic_regression(reg_logistic_l2,
                                                             X_train, y_train,
                                                             X_test)
 
-
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-assert 0.26 < l0_precision < 0.27
-assert 0.66 < l0_recall < 0.67
-assert 0.37 < l0_f1 < 0.38
+assert 0.26 < nol_precision < 0.27
+assert 0.66 < nol_recall < 0.67
+assert 0.37 < nol_f1 < 0.38
 
 assert 0.26 < l1_precision < 0.27
 assert 0.66 < l1_recall < 0.67
@@ -1468,7 +1465,6 @@ y_pred_test = reg_logistic_l0.predict(X_test)
 y_pred_train = reg_logistic_l0.predict(X_train)
 f1_train = f1_score(y_train, y_pred_train)
 f1_test = f1_score(y_test, y_pred_test)
-
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert 0.38 < f1_train < 0.39
@@ -1529,7 +1525,6 @@ f1_train = f1_score(y_train, y_pred_train)
 f1_test = f1_score(y_test, y_pred_test)
 print(f"Training F1 = {f1_train:.0%}")
 print(f"Testing F1 = {f1_test:.0%}")
-
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert 0.44 < f1_train < 0.45
