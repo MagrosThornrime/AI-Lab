@@ -219,13 +219,13 @@ print("Solution is correct!")
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.metrics import roc_auc_score
 
-classifier = DecisionTreeClassifier(criterion="entropy", random_state=0)
-classifier = classifier.fit(X_train, y_train)
+decision_tree = DecisionTreeClassifier(criterion="entropy", random_state=0)
+decision_tree = decision_tree.fit(X_train, y_train)
 
-y_score = classifier.predict_proba(X_test)[:, 1]
+y_score = decision_tree.predict_proba(X_test)[:, 1]
 auroc = roc_auc_score(y_test, y_score)
 print(f"auroc = {auroc}")
-plot_tree(classifier)
+plot_tree(decision_tree)
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert auroc > 0.7
@@ -273,10 +273,10 @@ print("Solution is correct!")
 # %% editable=true pycharm={"name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 from sklearn.ensemble import RandomForestClassifier
 
-classifier = RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=0, n_jobs=-1)
-classifier = classifier.fit(X_train, y_train)
+random_forest = RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=0, n_jobs=-1)
+random_forest = random_forest.fit(X_train, y_train)
 
-y_score = classifier.predict_proba(X_test)[:, 1]
+y_score = random_forest.predict_proba(X_test)[:, 1]
 auroc = roc_auc_score(y_test, y_score)
 print(f"auroc = {auroc}")
 
@@ -383,17 +383,19 @@ from sklearn.model_selection import GridSearchCV
 
 forest = RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=0, n_jobs=-1)
 grid_search = GridSearchCV(estimator=forest, param_grid={"max_features": [0.1, 0.2, 0.3, 0.4, 0.5]}, scoring="roc_auc", verbose=2)
-grid_search = grid_search.fit(X_train, y_train)
+grid_search = grid_search.fit(X_resampled, y_resampled)
+auroc = grid_search.score(X_test, y_test)
 max_features = grid_search.best_params_["max_features"]
-auroc = grid_search.best_score_
+print(max_features)
 
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
 assert 0.9 <= auroc <= 0.95
+print(auroc)
 print("Solution is correct!")
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
-# // Auroc otrzymane po dopasowaniu GridSearchCV do oversamplowanych danych było aż za duże, bo ponad 0.99. Dopiero rezygnacja z oversamplingu sprawiła, że program przechodził testy. No i otrzymane auroc było delikatnie wyższe niż wcześniej.
+# // Otrzymane auroc jest delikatnie wyższe niż wcześniej. Model jest dokładniejszy przy użyciu max_features=0.2
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # W praktycznych zastosowaniach osoba trenująca model wedle własnego uznana, doświadczenia, dostępnego czasu i zasobów wybiera, czy dostrajać hiperparametry i w jak szerokim zakresie. Dla Random Forest na szczęście często może nie być znaczącej potrzeby i za to go lubimy :)
@@ -437,10 +439,10 @@ print("Solution is correct!")
 # %% editable=true pycharm={"is_executing": true, "name": "#%%\n"} slideshow={"slide_type": ""} tags=["ex"]
 from lightgbm import LGBMClassifier
 
-classifier = LGBMClassifier(random_state=0, n_jobs=-1, importance_type="gain")
-classifier = classifier.fit(X_train, y_train)
+lgbm = LGBMClassifier(random_state=0, n_jobs=-1, importance_type="gain")
+lgbm = lgbm.fit(X_resampled, y_resampled)
 
-y_score = classifier.predict_proba(X_test)[:, 1]
+y_score = lgbm.predict_proba(X_test)[:, 1]
 auroc = roc_auc_score(y_test, y_score)
 print(f"auroc = {auroc}")
 
@@ -494,7 +496,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import classification_report
 
 def report(classifier):
-    classifier = classifier.fit(X_train, y_train)
+    classifier = classifier.fit(X_resampled, y_resampled)
     y_pred_1 = classifier.predict(X_test)
     print(classification_report(y_test, y_pred_1))
 
@@ -511,9 +513,9 @@ lgbm_classifier_1 = LGBMClassifier(random_state=0, importance_type="gain", verbo
 report(lgbm_classifier_1)
 lgbm_classifier_2 = LGBMClassifier(random_state=0, importance_type="gain", verbose=-1)
 random_search = RandomizedSearchCV(estimator=lgbm_classifier_2, n_iter=30, param_distributions=param_grid, scoring="roc_auc", verbose=2, n_jobs=-1)
-random_search = random_search.fit(X_train, y_train)
+random_search = random_search.fit(X_resampled, y_resampled)
 report(lgbm_classifier_2)
-auroc = random_search.best_score_
+auroc = random_search.score(X_test, y_test)
 print(auroc)
 
 
@@ -523,7 +525,7 @@ assert 0.9 <= auroc <= 0.99
 print("Solution is correct!")
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""} tags=["ex"]
-# //Nie widać większych zmian w precision i recall. Zmiany byłyby pożądane, bo by znaczyły że model lepiej sobie radzi. Ogólnie nie widać zbytniego poprawienia modelu - wartość auroc jest nawet niższa niż wcześniej, choć tylko odrobinę.
+# //Nie widać większych zmian w precision i recall. Zmiany byłyby pożądane, bo by znaczyły że model lepiej sobie radzi. Ogólnie model radzi sobie delikatnie lepiej, sądząc po ciut wyższym auroc.
 
 # %% [markdown] editable=true pycharm={"name": "#%% md\n"} slideshow={"slide_type": ""}
 # **Boosting - podsumowanie**
@@ -570,11 +572,35 @@ print("Solution is correct!")
 # **Uwaga:** Scikit-learn normalizuje ważności do zakresu [0, 1], natomiast LightGBM nie. Musisz to znormalizować samodzielnie, dzieląc przez sumę.
 
 # %% editable=true slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+from seaborn import barplot
 
+def plot_importances(model, model_name, normalize=False):
+    features = model.feature_importances_
+    if normalize:
+        features /= np.linalg.norm(features)
+    indices = np.argpartition(features, -5)[-5:]
+    max_values = features[indices]
+    names = [feature_names[index] for index in indices]
+    plot = barplot(x=max_values, y=names, orient="h")
+    plot.set(xlabel="feature importance", title=f"importance of features in '{model_name}' model")
+    
+    
+decision_resampled = DecisionTreeClassifier(criterion="entropy", random_state=0)
+decision_resampled = decision_resampled.fit(X_resampled, y_resampled)
+plot_importances(decision_resampled, "DecisionTreeClassifier")
+
+
+# %%
+forest_resampled = RandomForestClassifier(n_estimators=500, criterion="entropy", random_state=0, n_jobs=-1, max_features=0.2)
+forest_resampled = forest_resampled.fit(X_resampled, y_resampled)
+plot_importances(forest_resampled, "RandomForestClassifier")
+
+# %%
+plot_importances(lgbm_classifier_2, "LGBMClassifier", True)
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
+# // Najważniejszymi 2 cechami są sales(n)/sales(n-1) i profit on operating activities/financial expenses. Przy czym tylko drzewo decyzyjne stawia wyżej sales(n)/sales(n-1) niż to drugie. Dwa pozostałe modele są dokładniejsze, więc można im zaufać. Poza tym, wg. drzewa decyzyjnego oba parametry są podobnie istotne. Każdy model, na trzecim miejscu postawił operating expenses/total liabilities. W przypadku pozostałych dwóch parametrów, te są według różnych modeli uznawane różnie, retained earnings / total assets pojawia się na 4. miejscu według LGBM i lasów losowych. Ogólnie, każdy model mniej więcej skupia się na dwóch takich samych cechach, zaś pozostałe z 5 najważniejszych cech potrafią się dość różnić.
+# //Brakuje mi wiedzy ekonomicznej by stwierdzić, czy wyniki mają sens.
 
 # %% [markdown]
 # ### Dla zainteresowanych
