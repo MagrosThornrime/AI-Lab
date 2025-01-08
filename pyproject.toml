@@ -19,6 +19,16 @@ imbalanced-learn = "^0.12.4"
 lightgbm = "^4.5.0"
 torch = "^2.5.1"
 opencv-python = "^4.10.0.84"
+sacremoses = "^0.1.1"
+datasets = "^3.2.0"
+transformers = {extras = ["torch"], version = "^4.47.1"}
+accelerate = "^1.2.1"
+evaluate = "^0.4.3"
+tensorboard = "^2.18.0"
+tiktoken = "^0.8.0"
+blobfile = "^3.0.0"
+sentencepiece = "^0.2.0"
+peft = "^0.14.0"
 
 
 [build-system]

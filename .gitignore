@@ -1,2 +1,7 @@
 venv/
 .idea/
+lab5/question*
+lab5/poquad*
+lab5/seq2seq-output/
+lab5/output/
+lab5/lab_5.py
