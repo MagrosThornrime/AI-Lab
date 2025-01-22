@@ -299,6 +299,7 @@ class Blocking(PlayerInterface):
 game = TicTacToe(RandomPlayerWinIfCan(), Blocking(), SIZE)
 game.play()
 
+
 # %% [markdown] id="yWzDAt-rkdzG"
 # # Algorytm minimax
 #
@@ -361,15 +362,45 @@ game.play()
 #
 
 # %% editable=true id="8mpF72tLkdR-" slideshow={"slide_type": ""} tags=["ex"]
-from math import inf
-
-
 class MinimaxPlayer(PlayerInterface):
+
+    def check_winner(self, board, starting_player):
+        if check_for_end(board, starting_player):
+            return 1
+        if check_for_end(board, -starting_player):
+            return -1
+        return 0
+
+    def minimax(self, board, starting_player, current_player):
+        moves = get_possible_moves(board)
+        if not moves:
+            return self.check_winner(board, starting_player)
+        is_my_turn = current_player == starting_player
+        best = -np.inf if is_my_turn else np.inf
+        for row, col in moves:
+            board[row][col] = current_player
+            score = self.minimax(board, starting_player, -current_player)
+            best = max(best, score) if is_my_turn else min(best, score)
+            board[row][col] = 0
+        return best
     
     def move(self, board, player):
-
-        # your_code
-
+        if len(get_possible_moves(board)) == board.size:
+            row, col = random.choice(get_possible_moves(board))
+            board[row][col] = player
+            return
+        opponent = PLAYER_1 if player == PLAYER_2 else PLAYER_2
+        best_row, best_col = None, None
+        best_score = -np.inf
+        for row, col in get_possible_moves(board):
+            board[row][col] = player
+            if check_for_end(board, player):
+                return
+            score = self.minimax(board, player, opponent)
+            board[row][col] = 0
+            if score > best_score:
+                best_row, best_col, best_score = row, col, score
+        board[best_row][best_col] = player
 
 
 # %% colab={"base_uri": "https://localhost:8080/", "height": 1000} editable=true id="iwrRdk8DRbFP" outputId="e878f500-4c49-4195-e227-cf474532dbd0" slideshow={"slide_type": ""} tags=["ex"]
@@ -438,9 +469,51 @@ game.play()
 
 # %% editable=true id="M0dGwlnFS8hj" slideshow={"slide_type": ""} tags=["ex"]
 class AlphaBetaPlayer(PlayerInterface):
+    def check_winner(self, board, starting_player, depth):
+        if check_for_end(board, starting_player):
+            return 1 * depth
+        if check_for_end(board, -starting_player):
+            return -1 * depth
+        return 0
+    
+    def alphabeta(self, board, starting_player, current_player, alpha, beta, depth):
+        moves = get_possible_moves(board)
+        if not moves:
+            return self.check_winner(board, starting_player, depth)
+        is_my_turn = current_player == starting_player
+        best = -np.inf if is_my_turn else np.inf
+        for row, col in moves:
+            board[row][col] = current_player
+            score = self.alphabeta(board, starting_player, -current_player, alpha, beta, depth - 1)
+            if is_my_turn:
+                best = max(best, score)
+                alpha = max(alpha, best)
+            else:
+                best = min(best, score)
+                beta = min(beta, best)
+            board[row][col] = 0
+            if alpha >= beta:
+                break
+        return best
+    
     def move(self, board, player):
-
-        # your_code
+        moves = get_possible_moves(board)
+        if len(moves) == board.size:
+            row, col = random.choice(moves)
+            board[row][col] = player
+            return
+        opponent = PLAYER_1 if player == PLAYER_2 else PLAYER_2
+        best_row, best_col = None, None
+        best_score = -np.inf
+        for row, col in moves:
+            board[row][col] = player
+            if check_for_end(board, player):
+                return
+            score = self.alphabeta(board, player, opponent, -np.inf, np.inf, len(moves) + 1)
+            board[row][col] = 0
+            if score > best_score:
+                best_row, best_col, best_score = row, col, score
+        board[best_row][best_col] = player
 
 
 
@@ -448,7 +521,6 @@ class AlphaBetaPlayer(PlayerInterface):
 # %%time
 game = TicTacToe(AlphaBetaPlayer(), MinimaxPlayer(), SIZE)
 game.play()
-
 
 # %% [markdown] id="Jywnp22zmd-o"
 # # Monte Carlo Tree Search (MCTS)
@@ -472,10 +544,57 @@ game.play()
 #
 
 # %% editable=true id="_kixa8QfoPli" slideshow={"slide_type": ""} tags=["ex"]
-class MonteCarloPlayer(PlayerInterface):
-    def move(self, board, player):
+import copy
 
-        # your_code
+
+class MonteCarloPlayer(PlayerInterface):
+    
+    def check_winner(self, board, starting_player):
+        if check_for_end(board, starting_player):
+            return 1
+        if check_for_end(board, -starting_player):
+            return -1
+        return 0
+        
+    def simulate(self, board, player):
+        test_board = copy.deepcopy(board)
+        moves = get_possible_moves(test_board)
+        current_player = player
+        while moves:
+            row, col = random.choice(moves)
+            test_board[row][col] = current_player
+            current_player *= -1
+            moves = get_possible_moves(test_board)
+        return self.check_winner(board, player)
+
+    
+    def move(self, board, player):
+        moves = get_possible_moves(board)
+        if len(moves) == board.size:
+            row, col = random.choice(moves)
+            board[row][col] = player
+            return
+        opponent = PLAYER_1 if player == PLAYER_2 else PLAYER_2
+        best_row, best_col = None, None
+        best_wins = 0
+        best_draws = 0
+        samples = 10
+        for row, col in moves:
+            board[row][col] = player
+            if check_for_end(board, player):
+                return
+            wins, draws = 0, 0
+            for _ in range(samples):
+                result = self.simulate(board, opponent)
+                if result == -1:
+                    wins += 1
+                elif result == 0:
+                    draws += 1
+            if wins > best_wins or wins == best_wins and draws >= best_draws:
+                best_wins, best_draws = wins, draws
+                best_row, best_col = row, col
+            board[row][col] = 0
+        board[best_row][best_col] = player
 
 
 
