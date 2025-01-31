@@ -3899,6 +3899,21 @@ maintenance = ["conda-lock (==2.5.6)"]
 tests = ["black (>=24.3.0)", "matplotlib (>=3.3.4)", "mypy (>=1.9)", "numpydoc (>=1.2.0)", "pandas (>=1.1.5)", "polars (>=0.20.30)", "pooch (>=1.6.0)", "pyamg (>=4.0.0)", "pyarrow (>=12.0.0)", "pytest (>=7.1.2)", "pytest-cov (>=2.9.0)", "ruff (>=0.5.1)", "scikit-image (>=0.17.2)"]
 
 [[package]]
+name = "scikit-surprise"
+version = "1.1.4"
+description = "An easy-to-use library for recommender systems."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "scikit_surprise-1.1.4.tar.gz", hash = "sha256:130c45feaee9de4b8cba0aff413ad9b51b2d5c5c90d41aee4759e00059913752"},
+]
+
+[package.dependencies]
+joblib = ">=1.2.0"
+numpy = ">=1.19.5"
+scipy = ">=1.6.0"
+
+[[package]]
 name = "scipy"
 version = "1.15.0"
 description = "Fundamental algorithms for scientific computing in Python"
@@ -4137,6 +4152,19 @@ pure-eval = "*"
 
 [package.extras]
 tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
+
+[[package]]
+name = "surprise"
+version = "0.1"
+description = "An easy-to-use library for recommender systems."
+optional = false
+python-versions = "*"
+files = [
+    {file = "surprise-0.1-py2.py3-none-any.whl", hash = "sha256:0b5ad9b2e1c07ad74b93ece2e74beca83a05e32c7bd2ff2dcff7261e4cad0305"},
+]
+
+[package.dependencies]
+scikit-surprise = "*"
 
 [[package]]
 name = "sympy"
@@ -4831,4 +4859,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11.0"
-content-hash = "9c22d1d2d315ab631306111f04edfbab8e6f58ae7a0983f970e266cef4c3a072"
+content-hash = "d04e458b0b0d8b0fae0b782e0f91fbbda164ce5a4e3c445da74a9772cf62dd0e"
