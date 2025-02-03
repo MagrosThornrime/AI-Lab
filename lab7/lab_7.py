@@ -386,11 +386,25 @@ rec_item_avg
 # Następnie oblicz i wypisz MAP@k oraz FCP (k=10) dla naszego modelu średniej przedmiotu. Wartości podaj w procentach.
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
-def ap_k(y_true: list[int], y_pred: list[int], k: int) -> float:
-    ...
-    
-    # your_code
+def get_relevant(y_true: list[int], y_pred: list[int], k: int, i: int) -> int:
+    top_true = y_true[:k]
+    top_pred = y_pred[:i]
+    relevant = 0
+    for value in top_pred:
+        if value in top_true:
+            relevant += 1
+    return relevant
 
+def ap_k(y_true: list[int], y_pred: list[int], k: int) -> float:
+    result = 0
+    for i in range(k):
+        if y_pred[i] in y_true[:k]:
+            relevant = get_relevant(y_true, y_pred, k, i+1)
+            result += relevant / (i+1)
+    relevant = get_relevant(y_true, y_pred, k, k)
+    if relevant == 0:
+        return 0
+    return result / relevant
 
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
