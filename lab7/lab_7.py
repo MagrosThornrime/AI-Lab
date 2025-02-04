@@ -551,13 +551,14 @@ class BayesianAveragePredictor(AlgoBase):
         self.ratings_counts_ = dict()
 
         # compute rating sum for each item
-        ...
+        for item_id, entries in trainset.ir.items():
+            self.ratings_sums_[item_id] = np.sum([rating for _, rating in entries])
+            self.ratings_counts_[item_id] = len(entries)
         
         # confidence (C)
-        ...
 
-        # your_code
-        
+        ratings = [value for value in self.ratings_counts_.values()]
+        self.confidence_ = np.quantile(ratings, 0.25)
         return self
 
     def estimate(self, u, i):
@@ -565,9 +566,9 @@ class BayesianAveragePredictor(AlgoBase):
             raise PredictionImpossible("User and/or item is unknown.")
 
         # compute score formula
-        ...
-            
-        # your_code
+        score = self.confidence_ * self.global_avg_
+        score += self.ratings_sums_[i]
+        score /= self.confidence_ + self.ratings_counts_[i]
         
         return score
 
@@ -599,8 +600,7 @@ print_metrics(pred_bayes_avg, rec_bayes_avg)
 assert 1 <= rmse(pred_bayes_avg, verbose=False) <= 1.1
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# // skomentuj tutaj
-#
+# Osiągane RMSE i MAE są nieznacznie większe niż podczas przewidywania średniej. Wartości MAP@k i FCP@k również odrobinę niższe, bo 0.10%. Oba modele radzą sobie podobnie, ale ten bardziej skomplikowany nieco gorzej.
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -678,16 +678,35 @@ print_metrics(pred_knn_basic, rec_knn_basic)
 # Skomentuj wyniki i zmiany w poszczególnych metrykach.
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+from surprise.model_selection.search import GridSearchCV
 
+param_grid = {
+    "k": list(range(10, 51, 10)),
+    "min_k": list(range(1, 4)),
+    "sim_options": {"name": ["pearson"]},
+    "random_state": [0],
+    "verbose": [False]
+}
+
+grid_search = GridSearchCV(algo_class=KNNBasic,
+                           measures=["fcp"],
+                           param_grid=param_grid,
+                           refit=True,
+                           cv=10,
+                           n_jobs=-1,)
+grid_search.fit(data_train)
+
+best_model = grid_search.best_estimator["fcp"]
+pred_knn_basic_tuned = best_model.test(test_set)
+rec = get_recommendations(pred_knn_basic_tuned)
+print(f"Hiperparams: {grid_search.best_params["fcp"]}")
+print_metrics(pred_knn_basic_tuned, rec)
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
 assert 1 <= rmse(pred_knn_basic_tuned, verbose=False) <= 1.02
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
-#
-#
+# RMSE jest mniejsze niż poprzednio, MAE również. Sugerowałoby to, że wyniki będą nieco lepsze. Jednak wartość metryki MAP@k jest niższa o 0.36% niż poprzednio (różnica jest niewielka, ale jednak). Za to widać większą różnicę dla FCP@k - wynik jest lepszy o 0.91%.
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # Ten algorytm nie bierze jednak psychologicznych różnic między użytkownikami. Niektórzy użytkownicy będą średnio zawyżać oceny, bo film to dla nich luźna rozrywka, a poważni koneserzy mogą dawać filmom średnio dość niskie oceny. Taka tendencja to **user bias**, ale na szczęście można go policzyć - to po prostu średnia ocena wystawiana przez użytkownika, a więc średnia z każdego wiersza w macierzy ocen.
@@ -707,15 +726,30 @@ assert 1 <= rmse(pred_knn_basic_tuned, verbose=False) <= 1.02
 # Skomentuj uzyskane hiperparametry i wyniki.
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+from surprise.prediction_algorithms.knns import KNNWithMeans
 
+grid_search = GridSearchCV(algo_class=KNNWithMeans,
+                           measures=["fcp"],
+                           param_grid=param_grid,
+                           refit=True,
+                           cv=10,
+                           n_jobs=-1,)
+grid_search.fit(data_train)
+
+best_model = grid_search.best_estimator["fcp"]
+pred_knn_centered_tuned = best_model.test(test_set)
+rec = get_recommendations(pred_knn_centered_tuned)
+print(f"Hiperparams: {grid_search.best_params["fcp"]}")
+print_metrics(pred_knn_centered_tuned, rec)
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
 assert 0.92 <= rmse(pred_knn_centered_tuned, verbose=False) <= 0.97
 
 # %% [markdown] editable=true slideshow={"slide_type": ""} tags=["ex"]
-# // skomentuj tutaj
+# KNNWithMeans dużo lepiej minimalizuje obie używane przez nas funkcje kosztu niż KNNBase. Jednak wartości metryk MAP@k i FCP@k są gorsze, nieznacznie.
 #
+# Otrzymane hiperparametry w KNNWithMeans: k=50, min_k=1.
+# Otrzymane hiperparametry w KNNBase: k=40, min_k=1.
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -746,16 +780,51 @@ assert 0.92 <= rmse(pred_knn_centered_tuned, verbose=False) <= 0.97
 # Skomentuj, jaką uzyskano różnicę względem user-based i które rozwiązanie twoim zdaniem jest lepsze.
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+param_grid = {
+    "k": list(range(10, 51, 10)),
+    "min_k": list(range(1, 4)),
+    "sim_options": {"name": ["cosine"]},
+    "user_based": [False],
+    "random_state": [0],
+    "verbose": [False]
+}
 
+grid_search = GridSearchCV(algo_class=KNNBasic,
+                           measures=["fcp"],
+                           param_grid=param_grid,
+                           refit=True,
+                           cv=10,
+                           n_jobs=-1,)
+grid_search.fit(data_train)
+
+best_model = grid_search.best_estimator["fcp"]
+pred_knn_item_tuned = best_model.test(test_set)
+rec = get_recommendations(pred_knn_item_tuned)
+print("KNNBasic")
+print(f"Hiperparams: {grid_search.best_params["fcp"]}")
+print_metrics(pred_knn_item_tuned, rec)
+
+grid_search = GridSearchCV(algo_class=KNNWithMeans,
+                           measures=["fcp"],
+                           param_grid=param_grid,
+                           refit=True,
+                           cv=10,
+                           n_jobs=-1,)
+grid_search.fit(data_train)
+
+best_model = grid_search.best_estimator["fcp"]
+pred_knn_item_centered_tuned = best_model.test(test_set)
+rec = get_recommendations(pred_knn_item_centered_tuned)
+print("KNNWithMeans")
+print(f"Hiperparams: {grid_search.best_params["fcp"]}")
+print_metrics(pred_knn_item_centered_tuned, rec)
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
 assert 1 <= rmse(pred_knn_item_tuned, verbose=False) <= 1.03
 assert 0.92 <= rmse(pred_knn_item_centered_tuned, verbose=False) <= 0.97
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# // skomentuj tutaj
-#
+# Dla KNNBasic, wartości metryk są delikatnie gorsze dla item-based niż user-based. Podobnie dla KNNWithMeans.
 #
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
@@ -903,16 +972,33 @@ print_metrics(pred_funk_svd, rec_funk_svd)
 # Skomentuj wyniki.
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
-# your_code
+param_grid = {
+    "n_factors": list(range(80, 121, 10)),
+    "lr_all": [0.001, 0.003, 0.005, 0.007, 0.01],
+    "reg_all": [0.01, 0.02, 0.03],
+    "random_state": [0],
+    "verbose": [False]
+}
 
+grid_search = GridSearchCV(algo_class=SVD,
+                           measures=["fcp"],
+                           param_grid=param_grid,
+                           refit=True,
+                           cv=10,
+                           n_jobs=-1,)
+grid_search.fit(data_train)
+
+best_model = grid_search.best_estimator["fcp"]
+pred_funk_svd_tuned = best_model.test(test_set)
+rec = get_recommendations(pred_funk_svd_tuned)
+print(f"Hiperparams: {grid_search.best_params["fcp"]}")
+print_metrics(pred_funk_svd_tuned, rec)
 
 # %% slideshow={"slide_type": ""} tags=["ex"]
 assert 0.9 <= rmse(pred_funk_svd_tuned, verbose=False) <= 0.95
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
-# // skomentuj tutaj
-#
-#
+# Tuning hiperparametrów dużo nie pomógł. Wręcz wyniki są znowu nieznacznie gorsze. Choć RMSE jest mniejsze niż przed tuningiem.
 
 # %% [markdown] editable=true slideshow={"slide_type": ""}
 # ## Metody oparte o rozkład macierzy - podsumowanie
